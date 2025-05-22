@@ -26,7 +26,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.io.IOException
 import java.nio.charset.Charset
 import java.nio.charset.UnsupportedCharsetException
@@ -36,36 +35,25 @@ import android.webkit.URLUtil
 public class FlutterStarPrntPlugin : FlutterPlugin, MethodCallHandler {
   protected var starIoExtManager: StarIoExtManager? = null
   companion object {
-    protected lateinit var applicationContext: Context
+  lateinit var applicationContext: Context
+}
+ override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+  applicationContext = binding.applicationContext
+  MethodChannel(binding.binaryMessenger, "flutter_star_printer")
+    .setMethodCallHandler(this)
+}
 
-    @JvmStatic
-    fun registerWith(registrar: Registrar) {
-      val channel = MethodChannel(registrar.messenger(), "flutter_star_printer")
-      channel.setMethodCallHandler(FlutterStarPrntPlugin())
-      FlutterStarPrntPlugin.setupPlugin(registrar.messenger(), registrar.context())
-    }
-    @JvmStatic
-    fun setupPlugin(messenger: BinaryMessenger, context: Context) {
-      try {
-        applicationContext = context.getApplicationContext()
-        val channel = MethodChannel(messenger, "flutter_star_printer")
-        channel.setMethodCallHandler(FlutterStarPrntPlugin())
-      } catch (e: Exception) {
-          Log.e("FlutterStarPrnt", "Registration failed", e)
-      }
-    }
-  }
-  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    val channel = MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "flutter_star_printer")
-    channel.setMethodCallHandler(FlutterStarPrntPlugin())
-    setupPlugin(flutterPluginBinding.getFlutterEngine().getDartExecutor(), flutterPluginBinding.getApplicationContext())
-  }
+
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull rawResult: Result) {
     val result: MethodResultWrapper = MethodResultWrapper(rawResult)
     Thread(MethodRunner(call, result)).start()
   }
 
-  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {}
+  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+  MethodChannel(binding.binaryMessenger, "flutter_star_printer")
+    .setMethodCallHandler(null)
+}
+
   inner class MethodRunner(call: MethodCall, result: Result) : Runnable {
     private val call: MethodCall = call
     private val result: Result = result
